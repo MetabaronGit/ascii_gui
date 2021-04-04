@@ -1,9 +1,9 @@
 import pygame
 
-SCREEN_WIDTH = 792  # cislo je delitelne sirkou fontu
-SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 540  # cislo je delitelne sirkou fontu
+SCREEN_HEIGHT = 780  # original=960
 FONT_SIZE = 18
-LINE_SPACE = FONT_SIZE // 2
+LINE_SPACING = 5
 
 
 class Player:
@@ -52,6 +52,7 @@ pygame.display.set_caption("the quest - technological demo, 04.2021")
 console_font = pygame.font.Font('lucon.ttf', FONT_SIZE)
 TEXT_COLOR = (0, 200, 0)
 white = (255, 255, 255)
+dark_green = (0, 80, 0)
 CURSOR_COLOR = (0, 100, 0)
 
 CONSOLE_FONT_WIDTH, CONSOLE_FONT_HEIGHT = console_font.size("-")
@@ -65,11 +66,11 @@ def draw_image(y):
     draw_text(card1.get_name(), y)
     testImg = pygame.image.load(card1.get_image())
     # obrazek vycentrovany na ose x
-    screen.blit(testImg, (SCREEN_WIDTH // 2 - testImg.get_width() // 2, y + CONSOLE_FONT_HEIGHT + LINE_SPACE))
-    draw_text(card1.get_condition(), y + CONSOLE_FONT_HEIGHT + LINE_SPACE * 2 + testImg.get_height())
+    screen.blit(testImg, (SCREEN_WIDTH // 2 - testImg.get_width() // 2, y + CONSOLE_FONT_HEIGHT + LINE_SPACING))
+    draw_text(card1.get_condition(), y + CONSOLE_FONT_HEIGHT + LINE_SPACING * 2 + testImg.get_height())
 
 
-def draw_text(text_string, y, color=TEXT_COLOR, background_color=None, center=True):
+def draw_text(text_string, y, color=TEXT_COLOR, background_color=None, center=False):
     text = console_font.render(text_string, True, color, background_color)
     text_rect = text.get_rect()
     text_rect.y = y
@@ -81,38 +82,58 @@ def draw_text(text_string, y, color=TEXT_COLOR, background_color=None, center=Tr
 
 
 def draw_cursor(y):
-    draw_text(" " * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH), y + (actual_action + 1) * (CONSOLE_FONT_HEIGHT + LINE_SPACE), background_color=CURSOR_COLOR)
+    draw_text(" " * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH),
+              y + (actual_action + 1) * (CONSOLE_FONT_HEIGHT + LINE_SPACING), background_color=CURSOR_COLOR)
 
 def draw_console(y):
     options = ["take MUNITION", "enlarge COMBAT", "pray for Omnisiah", "SCORE", "None"]
     draw_text("-" * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH), y)
     for i, item in enumerate(options, 1):
-        draw_text(f" [{i}] {item}", y + (CONSOLE_FONT_HEIGHT + LINE_SPACE) * i, center=False)
+        draw_text(f" [{i}] {item}", y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * i, center=False)
 
 
-def draw_player_values(y):
-    hp = 20
-    max_hp = 20
-    combat = 0
-    munition = 0
-    command = 0
-    credits = 0
+def draw_player_values():
+    hp = 123
+    max_hp = 123
+    combat = 12
+    munition = 123
+    command = 123
+    psychic = 123
+    credits = 123456
+    corrupt = 12
     max_deck = 30
     deck = 30
 
-    separator = f"{'':-<15}+{'':->12}+{'':->14}+{'':->13}+{'':->16}"
-    draw_text(separator, y)
+    tab_lines = 4
+    y = SCREEN_HEIGHT - (tab_lines * 2 + 4) * (CONSOLE_FONT_HEIGHT + LINE_SPACING)
 
-    text = f"{hp:>3}/{max_hp:<3} HP | {combat:>3} COMBAT | {munition:>3} MUNITION | {command:>3} COMMAND | {credits:>6} CR  "
-    draw_text(text, y + CONSOLE_FONT_HEIGHT * 1)
+    # draw empty stats tab
+    text = "=< stats >" + "=" * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH - 10)
+    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING), color=dark_green)
 
-    # draw_text("-" * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH), y + CONSOLE_FONT_HEIGHT * 2)
-    draw_text(separator, y + CONSOLE_FONT_HEIGHT * 2)
+    free_fields = f"{'':>16}|{'':>16}|{'':>16}"
+    separator = f"{'':->16}+{'':->16}+{'':->16}"
 
-    text = f"  {' ':10} | {' inventory':10} | {' ':12} | {' ':11} | {deck:>3}/{max_deck:<} DECK  "
-    draw_text(text, y + CONSOLE_FONT_HEIGHT * 3)
+    for i in range(2, tab_lines * 2 + 1, 2):
+        draw_text(free_fields, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * i, color=dark_green)
+        if i == tab_lines * 2:
+            separator = "=" * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH)
+        draw_text(separator, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * (i + 1), color=dark_green)
 
-    draw_text(separator, y + CONSOLE_FONT_HEIGHT * 4)
+    # draw stats values
+
+    text = f"     {hp:>3}/{max_hp:<3} HP        {combat:>2} COMBAT    {munition:>3} MUNITION "
+    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * 2)
+
+    text = f"    {command:>3} COMMAND      {psychic:>3} PSYCHIC       {credits:>6} CR  "
+    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * 4)
+
+    text = f"    {corrupt:>3} CORRUPT      void shield"
+    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * 6)
+
+    text = f"      inventory                      {deck:>3}/{max_deck:<} DECK  "
+    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * 8)
+
 
 game_over = False
 
@@ -143,8 +164,11 @@ while not game_over:
             draw_image(50)
             draw_cursor(320)
             draw_console(320)
-            draw_player_values(480)
-            draw_text("add 2 to your combat bonus", 600 - FONT_SIZE - CONSOLE_FONT_HEIGHT // 2, color=white)
+            draw_player_values()
+            draw_text("add 2 to your combat bonus", SCREEN_HEIGHT - (FONT_SIZE + LINE_SPACING) * 2, color=white,
+                      center=True)
+            draw_text("second line of text", SCREEN_HEIGHT - (FONT_SIZE + LINE_SPACING), color=white,
+                      center=True)
 
         # zaviraci ikona okna X
         if event.type == pygame.QUIT:
