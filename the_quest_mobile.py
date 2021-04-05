@@ -1,21 +1,26 @@
 import pygame
 
-SCREEN_WIDTH = 540  # cislo je delitelne sirkou fontu
-SCREEN_HEIGHT = 780  # original=960
-FONT_SIZE = 18
-LINE_SPACING = 5
+SCREEN_WIDTH_PX = 540  # original=540
+SCREEN_HEIGHT_PX = 780  # original=960
+FONT_SIZE_PX = 18
+LINE_SPACING_PX = 5
 
 
 class Player:
-    def __init__(self, name:str, max_hp, combat, munition, command, credits):
+    def __init__(self, name:str, hp_max, combat, munition, command, credits):
         self.__name = name
-        self.__max_hp = max_hp
-        self.__actual_hp = max_hp
-        self.__combat = combat
-        self.__munition = munition
-        self.__command = command
-        self.__credits = credits
+        self.__stats = {"HP": str(hp_max),
+                        "HP_MAX": str(hp_max),
+                        "COMBAT": str(combat),
+                        "MUNITION": str(munition),
+                        "COMMAND": str(command),
+                        "CR": str(credits)}
 
+    def get_value(self, key: str):
+        if self.__stats.get(key):
+            return self.__stats.get(key)
+        else:
+            return ""
 
 class Card:
     def __init__(self, name:str, condition="", image="cultGreen", image_shift=0):
@@ -40,22 +45,22 @@ class Card:
 
 card1 = Card("Forge supply depot", condition="Mechanic heroes have doubled all effects here.", image="enemy03", image_shift=40)
 card2 = Card("Mechanicum sanctuary", "All Mechanicum heroes increase MAX HP by 2.")
-player = Player("Jurgen XVII", 20, 0, 0, 0, 0)
+player = Player("Jurgen XVII", 20, 0, 0, 0, 10)
 
 pygame.init()
 pygame.font.init()
 
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+screen = pygame.display.set_mode((SCREEN_WIDTH_PX, SCREEN_HEIGHT_PX))
 pygame.display.set_caption("the quest - technological demo, 04.2021")
 
 
-console_font = pygame.font.Font('lucon.ttf', FONT_SIZE)
+console_font = pygame.font.Font('lucon.ttf', FONT_SIZE_PX)
 TEXT_COLOR = (0, 200, 0)
 white = (255, 255, 255)
 dark_green = (0, 80, 0)
 CURSOR_COLOR = (0, 100, 0)
 
-CONSOLE_FONT_WIDTH, CONSOLE_FONT_HEIGHT = console_font.size("-")
+CONSOLE_FONT_WIDTH_PX, CONSOLE_FONT_HEIGHT_PX = console_font.size("-")
 
 actual_action = 0
 
@@ -66,73 +71,79 @@ def draw_image(y):
     draw_text(card1.get_name(), y)
     testImg = pygame.image.load(card1.get_image())
     # obrazek vycentrovany na ose x
-    screen.blit(testImg, (SCREEN_WIDTH // 2 - testImg.get_width() // 2, y + CONSOLE_FONT_HEIGHT + LINE_SPACING))
-    draw_text(card1.get_condition(), y + CONSOLE_FONT_HEIGHT + LINE_SPACING * 2 + testImg.get_height())
+    screen.blit(testImg, (SCREEN_WIDTH_PX // 2 - testImg.get_width() // 2, y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX))
+    draw_text(card1.get_condition(), y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX * 2 + testImg.get_height())
 
 
-def draw_text(text_string, y, color=TEXT_COLOR, background_color=None, center=False):
+def draw_text(text_string, y, x=0, color=TEXT_COLOR, background_color=None, center=False):
     text = console_font.render(text_string, True, color, background_color)
     text_rect = text.get_rect()
     text_rect.y = y
     if center:
-        text_rect.x = SCREEN_WIDTH // 2 - (len(text_string) * CONSOLE_FONT_WIDTH) // 2
+        text_rect.x = SCREEN_WIDTH_PX // 2 - (len(text_string) * CONSOLE_FONT_WIDTH_PX) // 2
     else:
-        text_rect.x = 0
+        text_rect.x = x
     screen.blit(text, text_rect)
 
 
 def draw_cursor(y):
-    draw_text(" " * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH),
-              y + (actual_action + 1) * (CONSOLE_FONT_HEIGHT + LINE_SPACING), background_color=CURSOR_COLOR)
+    draw_text(" " * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX),
+              y + (actual_action + 1) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX), background_color=CURSOR_COLOR)
 
 def draw_console(y):
     options = ["take MUNITION", "enlarge COMBAT", "pray for Omnisiah", "SCORE", "None"]
-    draw_text("-" * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH), y)
+    draw_text("-" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX), y)
     for i, item in enumerate(options, 1):
-        draw_text(f" [{i}] {item}", y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * i, center=False)
+        draw_text(f" [{i}] {item}", y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * i, center=False)
 
 
-def draw_player_values():
-    hp = 123
-    max_hp = 123
-    combat = 12
-    munition = 123
-    command = 123
-    psychic = 123
-    credits = 123456
-    corrupt = 12
-    max_deck = 30
-    deck = 30
+def draw_player_stats(player):
+    tab_columns = 3  # při změně šířky SCREEN_WIDTH se mění jen šířka sloupců
+    tab_column_width_chars = SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX // tab_columns
 
-    tab_lines = 4
-    y = SCREEN_HEIGHT - (tab_lines * 2 + 4) * (CONSOLE_FONT_HEIGHT + LINE_SPACING)
+    tab_lines = 4  # muzeme pridavat ci ubirat podle poctu zobrazovanych hodnot
+
+    # umisteni se pocita od spodniho okraje SCREENu nad popisky vybranych akci
+    y = SCREEN_HEIGHT_PX - (tab_lines * 2 + 4) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
 
     # draw empty stats tab
-    text = "=< stats >" + "=" * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH - 10)
-    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING), color=dark_green)
+    text = "=< stats >" + "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - 10)
+    draw_text(text, y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX), color=dark_green)
 
-    free_fields = f"{'':>16}|{'':>16}|{'':>16}"
-    separator = f"{'':->16}+{'':->16}+{'':->16}"
+    free_fields = f"{'':>{tab_column_width_chars}}|{'':>{tab_column_width_chars}}|"
+    separator = f"{'':->{tab_column_width_chars}}+{'':->{tab_column_width_chars}}+" + \
+                "-" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - tab_column_width_chars * 2 - 2)
 
     for i in range(2, tab_lines * 2 + 1, 2):
-        draw_text(free_fields, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * i, color=dark_green)
+        draw_text(free_fields, y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * i, color=dark_green)
         if i == tab_lines * 2:
-            separator = "=" * (SCREEN_WIDTH // CONSOLE_FONT_WIDTH)
-        draw_text(separator, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * (i + 1), color=dark_green)
+            separator = "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX)
+        draw_text(separator, y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * (i + 1), color=dark_green)
 
     # draw stats values
+    player_values = [["HP", "COMBAT", "MUNITION"],
+                     ["COMMAND", "psychic", "CR"],
+                     ["shield", "corrupt", ""],
+                     ["inventory", "", "DECK"]]
 
-    text = f"     {hp:>3}/{max_hp:<3} HP        {combat:>2} COMBAT    {munition:>3} MUNITION "
-    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * 2)
+    for n, row in enumerate(player_values, 1):
+        x = 0 - CONSOLE_FONT_WIDTH_PX
+        for i, item in enumerate(row, 1):
+            if not str(player.get_value(item)):
+                text = ""
+            else:
+                if item == "HP":
+                    value = str(player.get_value("HP")) + "/" + str(player.get_value("HP_MAX"))
+                else:
+                    value = str(player.get_value(item))
+                value += " "
+                text = f"{value + item:>{tab_column_width_chars}}"
 
-    text = f"    {command:>3} COMMAND      {psychic:>3} PSYCHIC       {credits:>6} CR  "
-    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * 4)
+            if i == 2:
+                x += CONSOLE_FONT_WIDTH_PX
 
-    text = f"    {corrupt:>3} CORRUPT      void shield"
-    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * 6)
-
-    text = f"      inventory                      {deck:>3}/{max_deck:<} DECK  "
-    draw_text(text, y + (CONSOLE_FONT_HEIGHT + LINE_SPACING) * 8)
+            draw_text(text, y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * n * 2, x)
+            x += tab_column_width_chars * CONSOLE_FONT_WIDTH_PX
 
 
 game_over = False
@@ -164,10 +175,10 @@ while not game_over:
             draw_image(50)
             draw_cursor(320)
             draw_console(320)
-            draw_player_values()
-            draw_text("add 2 to your combat bonus", SCREEN_HEIGHT - (FONT_SIZE + LINE_SPACING) * 2, color=white,
+            draw_player_stats(player)
+            draw_text("add 2 to your combat bonus", SCREEN_HEIGHT_PX - (FONT_SIZE_PX + LINE_SPACING_PX) * 2, color=white,
                       center=True)
-            draw_text("second line of text", SCREEN_HEIGHT - (FONT_SIZE + LINE_SPACING), color=white,
+            draw_text("second line of text", SCREEN_HEIGHT_PX - (FONT_SIZE_PX + LINE_SPACING_PX), color=white,
                       center=True)
 
         # zaviraci ikona okna X
