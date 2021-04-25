@@ -23,6 +23,38 @@ class Player:
         else:
             return ""
 
+
+class PlayerValue:
+    def __init__(self, name: str, value: int, max_value=-1):
+        self.__name = name
+        self.__value = value
+        self.__max_value = max_value
+
+    def get_name(self) -> str:
+        return self.__name
+
+    def get_value(self) -> int:
+        return self.__value
+
+    def get_max_value(self) -> int:
+        return self.__max_value
+
+    def increase_value(self, amount: int) -> None:
+        self.__value += amount
+        if self.__max_value != -1 and self.__value > self.__max_value:
+            self.__value = self.__max_value
+
+    def decrease_value(self, amount: int) -> None:
+        self.__value -= amount
+        if self.__value < 0:
+            self.__value = 0
+
+
+
+
+
+
+
 class Card:
     def __init__(self, name:str, type="event", condition="", image="cultGreen", image_shift=0):
         self.__name = name
@@ -51,6 +83,8 @@ class Card:
 card1 = Card("Forge supply depot", condition="Mechanic heroes have doubled all effects here.", image="enemy03", image_shift=40)
 card2 = Card("Mechanicum sanctuary", "All Mechanicum heroes increase MAX HP by 2.")
 player = Player("servitor XVII-12458", 20, 0, 0, 0, 10, tab_lines=4)
+
+var1 = PlayerValue("HP", 20)
 
 
 def create_quest_deck():
