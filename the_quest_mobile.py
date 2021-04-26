@@ -56,11 +56,11 @@ class PlayerValue:
 
 
 class Card:
-    def __init__(self, name:str, type="event", condition="", image="cultGreen", image_shift=0):
+    def __init__(self, name:str, type="event", condition="", image="img_00.jpg", image_shift=0):
         self.__name = name
         self.__condition = condition
         self.__actions = ["take MUNITION", "enlarge COMBAT", "pray for Omnisiah", "SCORE"]
-        self.__image = "images/" + image + ".png"
+        self.__image = "images/" + image
         self.__image_shift = image_shift
         self.__type = type
 
@@ -80,9 +80,10 @@ class Card:
         return self.__image_shift
 
 
-card1 = Card("Forge supply depot", condition="Mechanic heroes have doubled all effects here.", image="enemy03", image_shift=40)
-card2 = Card("Mechanicum sanctuary", "All Mechanicum heroes increase MAX HP by 2.")
-player = Player("servitor XVII-12458", 20, 0, 0, 0, 10, tab_lines=4)
+card1 = Card("Card one name")
+card2 = Card("Card two name", image="img_02.jpg")
+card3 = Card("Card three name", image="img_03.jpg")
+player = Player("servitor XVII-12458", 20, 0, 0, 0, 10, tab_lines=3)
 
 var1 = PlayerValue("HP", 20)
 
@@ -115,10 +116,10 @@ def draw_card(card):
     draw_text(text, y, color=dark_green)
     # y = y - card1.get_image_shift()
     # draw_text("Forge supply depot", y)
-    card_img = pygame.image.load(card1.get_image())
+    card_img = pygame.image.load(card.get_image())
     # obrazek vycentrovany na ose x
     screen.blit(card_img, (SCREEN_WIDTH_PX // 2 - card_img.get_width() // 2, y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX))
-    draw_text(card1.get_condition(), y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX * 2 + card_img.get_height())
+    draw_text(card.get_condition(), y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX * 2 + card_img.get_height())
 
     text = f"=< {card.get_type()} >" + "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - len(card.get_type()))
     y = 0
