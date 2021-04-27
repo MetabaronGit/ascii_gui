@@ -7,8 +7,6 @@ FONT_SIZE_PX = 18
 CONSOLE_FONT = pygame.font.Font('lucon.ttf', FONT_SIZE_PX)
 CONSOLE_FONT_WIDTH_PX, CONSOLE_FONT_HEIGHT_PX = CONSOLE_FONT.size("-")
 LINE_SPACING_PX = 5
-CONSOLE_FONT_WIDTH_PX = int
-CONSOLE_FONT_HEIGHT_PX = int
 
 SCREEN_WIDTH_PX = 540  # original=540
 SCREEN_HEIGHT_PX = 780  # original=960
@@ -16,7 +14,8 @@ SCREEN = pygame.display.set_mode((SCREEN_WIDTH_PX, SCREEN_HEIGHT_PX))
 
 TEXT_COLOR = (0, 200, 0)
 WHITE = (255, 255, 255)
-DARK_GREEN = (0, 80, 0)
+DARK_GREEN = (0, 100, 0)
+LIGHT_GREEN = (0, 255, 0)
 CURSOR_COLOR = (0, 100, 0)
 
 
@@ -83,13 +82,17 @@ class Player:
 
 
 class Card:
-    def __init__(self, name:str, type="event", condition="", image="img_00.jpg", image_shift=0):
+    def __init__(self, name:str, type="event", base_power=0, condition="", image="img_00.jpg", image_shift=0,
+                 bounty=""):
         self.__name = name
         self.__condition = condition
         self.__actions = ["take MUNITION", "enlarge COMBAT", "pray for Omnisiah", "SCORE"]
         self.__image = "images/" + image
         self.__image_shift = image_shift
         self.__type = type
+        self.__base_power = base_power
+        self.__actual_power = base_power
+        self.__bounty = bounty
 
     def get_name(self):
         return self.__name
@@ -106,25 +109,47 @@ class Card:
     def get_image_shift(self):
         return self.__image_shift
 
+    def get_power(self):
+        return self.__power
+
+    def get_bounty(self):
+        return self.__bounty
+
+    def get_base_power(self):
+        return self.__base_power
+
 
 def create_quest_deck():
     pass
 
 
 def draw_card(card):
-    text = card.get_name()
-    y = 0
-    draw_text(text, y, color=DARK_GREEN)
-    # y = y - card1.get_image_shift()
-    # draw_text("Forge supply depot", y)
-    card_img = pygame.image.load(card.get_image())
-    # obrazek vycentrovany na ose x
-    SCREEN.blit(card_img, (SCREEN_WIDTH_PX // 2 - card_img.get_width() // 2, y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX))
-    draw_text(card.get_condition(), y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX * 2 + card_img.get_height())
+    # nad prvnim radkem textu je pulradek odsazeni
+    y = CONSOLE_FONT_HEIGHT_PX // 2
 
-    text = f"=< {card.get_type()} >" + "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - len(card.get_type()))
-    y = 0
-    draw_text(text, y, color=DARK_GREEN)
+    if card.get_type() == "enemy":
+        draw_text(card.get_name(), y, color=WHITE, center=True)
+        y += CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX
+        draw_text(card.get_power(), y, color=WHITE, center=True)
+
+    if card.get_type() == "event":
+        y += CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX
+        draw_text(card.get_name(), y, color=WHITE, center=True)
+
+    # obrazek vycentrovany na ose x
+    # y = y - card1.get_image_shift()
+    card_img = pygame.image.load(card.get_image())
+    SCREEN.blit(card_img, (SCREEN_WIDTH_PX // 2 - card_img.get_width() // 2,
+                           y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX))
+
+    if card.get_condition():
+        y += CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX * 2 + card_img.get_height()
+        draw_text(card.get_condition(), y, color=LIGHT_GREEN, center=True)
+
+    if card.get_bounty():
+        y += CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX
+        draw_text(card.get_bounty(), y, color=LIGHT_GREEN, center=True)
+
 
 
 # OK
@@ -215,9 +240,9 @@ class GameTable:
 def main():
     pygame.display.set_caption("the quest - technological demo, since 04.2021")
 
-    card1 = Card("Card one name")
-    card2 = Card("Card two name", image="img_02.jpg")
-    card3 = Card("Card three name", image="img_03.jpg")
+    card1 = Card("Ambient card", condition="card ability text line one", bounty="VP ")
+    card2 = Card("Event card test", image="img_02.jpg", condition="card ability text line one")
+    card3 = Card("Enemy card test", type="enemy", base_power=5, image="img_03.jpg", condition="card ability text line one")
     player = Player("Necron Lord")
 
     actual_action = 0
@@ -246,12 +271,12 @@ def main():
                     actual_action = 1
 
                 SCREEN.fill((0, 0, 0))
-                # draw_card(card1)
+                draw_card(card1)
                 # draw_cursor(player, actual_action, [1, 2, 3, 4, 5, 6])
                 # draw_console(player)
                 # draw_player_stats(player)
-                # draw_text("add 2 to your combat bonus", SCREEN_HEIGHT_PX - (FONT_SIZE_PX + LINE_SPACING_PX) * 2,
-                #           color=WHITE, center=True)
+                draw_text("add 2 to your combat bonus", SCREEN_HEIGHT_PX - (FONT_SIZE_PX + LINE_SPACING_PX) * 2,
+                          color=WHITE, center=True)
                 draw_text("second line of text", SCREEN_HEIGHT_PX - (FONT_SIZE_PX + LINE_SPACING_PX), color=WHITE,
                           center=True)
 

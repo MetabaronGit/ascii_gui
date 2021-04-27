@@ -38,7 +38,7 @@ class Card:
         return self.__image_shift
 
 
-card1 = Card("Forge supply depot", condition="Mechanic heroes have doubled all effects here.", image="enemy03", image_shift=40)
+card1 = Card("Forge supply depot", condition="Mechanic heroes have doubled all effects here.", image="cultGreen", image_shift=40)
 card2 = Card("Mechanicum sanctuary", "All Mechanicum heroes increase MAX HP by 2.")
 player = Player("Jurgen XVII", 20, 0, 0, 0, 0)
 
