@@ -18,11 +18,18 @@ DARK_GREEN = (0, 100, 0)
 LIGHT_GREEN = (0, 255, 0)
 CURSOR_COLOR = (0, 100, 0)
 
+VARIABLE_NAMES = ["POWER", "COMBAT", "MUNITION",
+                  "COMMAND", "DEFENCE", "VP",
+                  "POISON", "SUPPLY", "DECK"]
+
 
 class PlayerVariable:
-    # name="NONE" -> nepouziva se, value= -1 -> unlimited, max_value=-1 -> unlimited
-    def __init__(self, name: str, value=0, max_value=-1):
-        self.__name = name
+    # name_index=None -> nepouziva se, value= -1 -> unlimited, max_value=-1 -> unlimited
+    def __init__(self, name_index: any, value=0, max_value=-1):
+        if name_index is not None:
+            self.__name = VARIABLE_NAMES[name_index]
+        else:
+            self.__name = None
         self.__value = value
         self.__max_value = max_value
 
@@ -49,38 +56,20 @@ class PlayerVariable:
 
 class Player:
     def __init__(self, name: str):
-
-            # self.__var1 = PlayerValue("POWER", 20, 20)
-            # self.__var2 = PlayerValue("COMBAT")
-            # self.__var3 = PlayerValue("MUNITION", 2)
-            # self.__var4 = PlayerValue("COMMAND", 4)
-            # self.__var5 = PlayerValue("FORTIFICATION")
-            # self.__var6 = PlayerValue("VP")
-            # self.__var7 = PlayerValue("NONE", -1)
-            # self.__var8 = PlayerValue("SUPPLY", 5)
-            # self.__var9 = PlayerValue("DECK", 10, 10)
         self.__name = name
         self.__tab_lines = 3
         self.__stats = dict()
+
         if name == "Necron Lord":
-        # self.__stats[self.__var1.get_name()] = self.__var1
-        # self.__stats[self.__var2.get_name()] = self.__var2
-        # self.__stats[self.__var3.get_name()] = self.__var3
-        # self.__stats[self.__var4.get_name()] = self.__var4
-        # self.__stats[self.__var5.get_name()] = self.__var5
-        # self.__stats[self.__var6.get_name()] = self.__var6
-        # self.__stats[self.__var7.get_name()] = self.__var7
-        # self.__stats[self.__var8.get_name()] = self.__var8
-        # self.__stats[self.__var9.get_name()] = self.__var9
-            self.__stats["POWER"] = PlayerVariable("POWER", 20, 20)
-            self.__stats["COMBAT"] = PlayerVariable("COMBAT")
-            self.__stats["MUNITION"] = PlayerVariable("MUNITION", 2)
-            self.__stats["COMMAND"] = PlayerVariable("COMMAND", 4)
-            self.__stats["DEFENCES"] = PlayerVariable("DEFENCES")
-            self.__stats["VP"] = PlayerVariable("VP")
-            self.__stats["POISON"] = PlayerVariable("NONE", -1)
-            self.__stats["SUPPLY"] = PlayerVariable("SUPPLY", 5)
-            self.__stats["DECK"] = PlayerVariable("DECK", 10, 10)
+            self.__stats[VARIABLE_NAMES[0]] = PlayerVariable(0, 20, 20)  # power
+            self.__stats[VARIABLE_NAMES[1]] = PlayerVariable(1)          # combat
+            self.__stats[VARIABLE_NAMES[2]] = PlayerVariable(2, 2)       # munition
+            self.__stats[VARIABLE_NAMES[3]] = PlayerVariable(3, -1)      # command
+            self.__stats[VARIABLE_NAMES[4]] = PlayerVariable(4)          # defence
+            self.__stats[VARIABLE_NAMES[5]] = PlayerVariable(5)          # vp
+            self.__stats[VARIABLE_NAMES[6]] = PlayerVariable(None, -1)   # poison
+            self.__stats[VARIABLE_NAMES[7]] = PlayerVariable(7, 20)      # supply
+            self.__stats[VARIABLE_NAMES[8]] = PlayerVariable(8, 10, 10)  # deck
 
     def get_variable_value(self, key: str) -> int:
         if self.__stats.get(key):
@@ -107,12 +96,35 @@ class Player:
         return self.__tab_lines
 
 
+class Action:
+    def __init__(self, name: str, base_manner="x", description="continue", base_price=[]):
+        self.__name = name
+        self.__base_manner = base_manner
+        self.__actual_manner = base_manner
+        self.__description = description
+        self.__base_price = base_price
+        self.__actual_price = base_price
+
+    def get_name(self):
+        return self.__name
+
+    def get_base_manner(self):
+        return self.__base_manner
+
+    def get_actual_manner(self):
+        return self.__actual_manner
+
+    def get_actual_price_list(self) -> list:
+        # vrací list tuplů ("jméno proměnné", hodnota)
+        return self.__actual_price
+
+
 class Card:
-    def __init__(self, name:str, type="event", base_power=0, condition="", image="img_00.jpg", image_shift=0,
-                 bounty=""):
+    def __init__(self, name: str, type="event", base_power=0, condition="", image="img_00.jpg", image_shift=0,
+                 bounty="", actions=[]):
         self.__name = name
         self.__condition = condition
-        self.__actions = ["take MUNITION", "enlarge COMBAT", "pray for Omnisiah", "SCORE"]
+        self.__actions = actions
         self.__image = "images/" + image
         self.__image_shift = image_shift
         self.__type = type
@@ -143,6 +155,9 @@ class Card:
 
     def get_base_power(self):
         return self.__base_power
+
+    def get_actions(self) -> list:
+        return self.__actions
 
 
 class GameTable:
@@ -201,18 +216,23 @@ def draw_cursor(player: Player, actual_action, options: list):
               y + (actual_action + 1) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX), background_color=CURSOR_COLOR)
 
 
-def draw_console(player):
-    options = ["take MUNITION", "enlarge COMBAT", "pray for Omnisiah", "SCORE", "None", "special hero action"]
-    y = SCREEN_HEIGHT_PX - (int(player.get_variable_value("tab_lines")) * 2 + 4) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
-    y -= (len(options) + 1) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
+def draw_console(player, card):
+    max_visible_actions = 6
+    y = SCREEN_HEIGHT_PX - (int(player.get_tab_lines()) * 2 + 4) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
+    y -= (max_visible_actions + 1) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
 
-    text = "=< actions >" + "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - 12)
+    text = "=< actions >" + "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - 15) + "^v="
     draw_text(text, y, color=DARK_GREEN)
 
-    for i, item in enumerate(options, 1):
-        draw_text(f" [{i}] {item}", y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * i)
+    for i, action in enumerate(card.get_actions(), 1):
+        text = f" [{action.get_actual_manner()}]"
+        for price in action.get_actual_price_list():
+            text += f"[{price[1]} {price[0]}]"
+        text += f" {action.get_name()}"
+        draw_text(text, y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * i)
 
 
+# OK
 def draw_player_stats(player):
     tab_columns = 3  # při změně šířky SCREEN_WIDTH se mění jen šířka sloupců
     tab_column_width_chars = SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX // tab_columns
@@ -243,10 +263,15 @@ def draw_player_stats(player):
     x = CONSOLE_FONT_WIDTH_PX
     y = SCREEN_HEIGHT_PX - (tab_lines * 2 + 2) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
     for n, item in enumerate(player.get_stats_names(), 1):
-        if player.get_variable_name(item) == "NONE":
+        if player.get_variable_name(item) == None:
             text = ""
         else:
-            text = f"{item}: {player.get_variable_value(item)}"
+            if player.get_variable_value(item) != -1:
+                text = f"{item}: {player.get_variable_value(item)}"
+            else:
+                text = f"{item}: ∞"
+            if player.get_max_variable_value(item) != -1:
+                text += f"/{player.get_max_variable_value(item)}"
         draw_text(text, y, x=x)
         x += tab_column_width_chars * CONSOLE_FONT_WIDTH_PX + CONSOLE_FONT_WIDTH_PX
 
@@ -255,34 +280,37 @@ def draw_player_stats(player):
             y += (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * 2
 
 
-    # for n, row in enumerate(player.get_stats_names(), 1):
-    #     x = 0 - CONSOLE_FONT_WIDTH_PX
-    #     for i, item in enumerate(row, 1):
-    #         if not str(player.get_value(item)):
-    #             text = ""
-    #         else:
-    #             if item == "HP":
-    #                 value = str(player.get_value("HP")) + "/" + str(player.get_value("HP_MAX"))
-    #             else:
-    #                 value = str(player.get_value(item))
-    #             value += " "
-    #             text = f"{value + item:>{tab_column_width_chars}}"
-    #
-    #         if i == 2:
-    #             x += CONSOLE_FONT_WIDTH_PX
-    #
-    #         draw_text(text, y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * n * 2, x)
-    #         x += tab_column_width_chars * CONSOLE_FONT_WIDTH_PX
-
-
 def main():
     pygame.display.set_caption("the quest - technological demo, since 04.2021")
 
-    card1 = Card("Ambient card", condition="card ability text line one", bounty="VP", image="cultGreen.png")
-    card2 = Card("Event card test", image="img_02.jpg", condition="card ability text line one")
-    card3 = Card("Enemy card test", type="enemy", base_power=5, image="img_03.jpg",
-                 condition="card ability text line one", bounty="VP, COMMAND")
     player = Player("Necron Lord")
+
+    card1 = Card("Ambient card", condition="card ability text line one", bounty="VP", image="cultGreen.png")
+    card2 = Card("Event card test", image="img_02.jpg", condition="card ability text line one",
+                 actions=[Action("pass"),
+                          Action("fire support", "+", "deal DAMAGE 3", base_price=[("MUNITION", 2), ("COMMAND", 3)])]
+                 )
+
+    card3 = Card("Enemy card test", type="enemy", base_power=5, image="img_03.jpg",
+                 condition="card ability text line one", bounty="VP, COMMAND",
+                 actions=[Action("pass"),
+                          Action("reinforcements", "+", "SUPPLY - 2 and DEFENCE + 1"),
+                          Action("fire support", "+", "deal DAMAGE 3", base_price=[("MUNITION", 2)])]
+                 )
+
+    card4 = Card("Secret tomb", type="event", image="img_12.jpg",
+                 condition="event",
+                 actions=[Action("secret passage", "+", "double any gains here", base_price=[(VARIABLE_NAMES[3], 1)]),
+                          Action("pass", "x", "VP + 50"),
+                          Action(f"take {VARIABLE_NAMES[2]}", "x", f"{VARIABLE_NAMES[2]} + 2"),
+                          Action(f"take {VARIABLE_NAMES[7]}", "x", f"{VARIABLE_NAMES[7]} + 2"),
+                          Action("reforge", "R", f"{VARIABLE_NAMES[2]} + 2", base_price=[(VARIABLE_NAMES[7], 2)]),
+                          Action("heal poison", " ", f"remove all {VARIABLE_NAMES[6]}", base_price=[(VARIABLE_NAMES[0], 2)]),
+                          Action(f"spare {VARIABLE_NAMES[2]}", "x", f"put card back to the deck and shuffle it", base_price=[(VARIABLE_NAMES[2], 4)])]
+                          # next time when will be draw, automaticly add 4 MUNITION
+                 )
+
+    actual_card = card4
 
     actual_action = 0
     game_over = False
@@ -310,9 +338,9 @@ def main():
                     actual_action = 1
 
                 SCREEN.fill((0, 0, 0))
-                draw_card(card3)
+                draw_card(actual_card)
                 # draw_cursor(player, actual_action, [1, 2, 3, 4, 5, 6])
-                # draw_console(player)
+                draw_console(player, actual_card)
                 draw_player_stats(player)
                 draw_text("add 2 to your combat bonus", SCREEN_HEIGHT_PX - (FONT_SIZE_PX + LINE_SPACING_PX) * 2,
                           color=WHITE, center=True)
