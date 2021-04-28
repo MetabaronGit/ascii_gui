@@ -22,6 +22,8 @@ VARIABLE_NAMES = ["POWER", "COMBAT", "MUNITION",
                   "COMMAND", "DEFENCE", "VP",
                   "POISON", "SUPPLY", "DECK"]
 
+MAX_VISIBLE_ACTIONS = 6
+
 
 class PlayerVariable:
     # name_index=None -> nepouziva se, value= -1 -> unlimited, max_value=-1 -> unlimited
@@ -160,15 +162,6 @@ class Card:
         return self.__actions
 
 
-class GameTable:
-    def __init__(self):
-        self.__name = "name"
-
-
-def create_quest_deck():
-    pass
-
-# OK
 def draw_card(card):
     # nad prvnim radkem textu je pulradek odsazeni
     y = CONSOLE_FONT_HEIGHT_PX // 2
@@ -197,7 +190,6 @@ def draw_card(card):
         draw_text(card.get_bounty(), y, color=LIGHT_GREEN, center=True)
 
 
-# OK
 def draw_text(text_string, y, x=0, color=TEXT_COLOR, background_color=None, center=False):
     text = CONSOLE_FONT.render(text_string, True, color, background_color)
     text_rect = text.get_rect(center=(SCREEN_WIDTH_PX // 2, y))
@@ -209,22 +201,25 @@ def draw_text(text_string, y, x=0, color=TEXT_COLOR, background_color=None, cent
     SCREEN.blit(text, text_rect)
 
 
-def draw_cursor(player: Player, actual_action, options: list):
-    y = SCREEN_HEIGHT_PX - (int(player.get_variable_value("tab_lines")) * 2 + 4) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
-    y -= (len(options) + 1) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
-    draw_text(" " * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX),
-              y + (actual_action + 1) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX), background_color=CURSOR_COLOR)
-
-
-def draw_console(player, card):
-    max_visible_actions = 6
+def draw_cursor(player: Player, cursor_position):
     y = SCREEN_HEIGHT_PX - (int(player.get_tab_lines()) * 2 + 4) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
-    y -= (max_visible_actions + 1) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
+    y -= MAX_VISIBLE_ACTIONS * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) + CONSOLE_FONT_HEIGHT_PX / 2
+    y += (cursor_position + 1) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) + LINE_SPACING_PX
+    draw_text(" " * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX), y, background_color=CURSOR_COLOR)
+
+
+def draw_action_console(player, card):
+    y = SCREEN_HEIGHT_PX - (int(player.get_tab_lines()) * 2 + 4) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
+    y -= MAX_VISIBLE_ACTIONS * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) + CONSOLE_FONT_HEIGHT_PX / 2
 
     text = "=< actions >" + "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - 15) + "^v="
     draw_text(text, y, color=DARK_GREEN)
 
+    y += LINE_SPACING_PX
     for i, action in enumerate(card.get_actions(), 1):
+        if i > MAX_VISIBLE_ACTIONS:
+            # Todo: rozsvícení ukazatele posunu listu
+            break
         text = f" [{action.get_actual_manner()}]"
         for price in action.get_actual_price_list():
             text += f"[{price[1]} {price[0]}]"
@@ -232,7 +227,6 @@ def draw_console(player, card):
         draw_text(text, y + (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * i)
 
 
-# OK
 def draw_player_stats(player):
     tab_columns = 3  # při změně šířky SCREEN_WIDTH se mění jen šířka sloupců
     tab_column_width_chars = SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX // tab_columns
@@ -312,7 +306,7 @@ def main():
 
     actual_card = card4
 
-    actual_action = 0
+    cursor_position = 0
     game_over = False
 
     while not game_over:
@@ -322,25 +316,27 @@ def main():
                     game_over = True
 
                 if event.key == pygame.K_DOWN:
-                    actual_action += 1
-                    if actual_action > 4:
-                        actual_action = 0
+                    cursor_position += 1
+                    if cursor_position > len(actual_card.get_actions()) - 1:
+                        cursor_position = 0
 
                 if event.key == pygame.K_UP:
-                    actual_action -= 1
-                    if actual_action < 0:
-                        actual_action = 4
+                    cursor_position -= 1
+                    if cursor_position < 0:
+                        cursor_position = len(actual_card.get_actions()) - 1
 
-                if event.key == pygame.K_1 or event.key == pygame.K_KP1:  # NUM 1
-                    actual_action = 0
+                # if event.key == pygame.K_1 or event.key == pygame.K_KP1:  # NUM 1
+                #     cursor_position = 0
 
-                if event.key == pygame.K_2 or event.key == pygame.K_KP2:  # NUM 2
-                    actual_action = 1
+                # if event.key == pygame.K_2 or event.key == pygame.K_KP2:  # NUM 2
+                #     cursor_position = 1
 
                 SCREEN.fill((0, 0, 0))
                 draw_card(actual_card)
-                # draw_cursor(player, actual_action, [1, 2, 3, 4, 5, 6])
-                draw_console(player, actual_card)
+                draw_cursor(player, cursor_position)
+                draw_action_console(player, actual_card)
+                # ToDo: actual_visible_action_list
+
                 draw_player_stats(player)
                 draw_text("add 2 to your combat bonus", SCREEN_HEIGHT_PX - (FONT_SIZE_PX + LINE_SPACING_PX) * 2,
                           color=WHITE, center=True)
