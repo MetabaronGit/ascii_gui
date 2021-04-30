@@ -218,18 +218,29 @@ def draw_cursor(player: Player, cursor_position):
     print_text(" " * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX), y, background_color=CURSOR_COLOR)
 
 
-def print_action_console(player, action_list: list):
+def print_action_console(player, action_list: list, cursor_position: int, max_cursor_position: int):
     y = SCREEN_HEIGHT_PX - (int(player.get_tab_lines()) * 2 + 4) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
     y -= MAX_VISIBLE_ACTIONS * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) + CONSOLE_FONT_HEIGHT_PX / 2
 
-    text = "=< actions >" + "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - 15) + "^v="
+    text = "=< actions >" + "=" * (SCREEN_WIDTH_PX // CONSOLE_FONT_WIDTH_PX - 15)
     print_text(text, y, color=DARK_GREEN)
+
+    if cursor_position > 0:
+        color = WHITE
+    else:
+        color = DARKEST_GREEN
+    print_text("^", y, SCREEN_WIDTH_PX - CONSOLE_FONT_WIDTH_PX * 3, color=color)
+
+    if (cursor_position + len(action_list) - 1) < max_cursor_position:
+        color = WHITE
+    else:
+        color = DARKEST_GREEN
+    print_text("v", y, SCREEN_WIDTH_PX - CONSOLE_FONT_WIDTH_PX * 2, color=color)
+
+    print_text("=", y, SCREEN_WIDTH_PX - CONSOLE_FONT_WIDTH_PX, color=DARK_GREEN)
 
     y += LINE_SPACING_PX
     for i, action in enumerate(action_list, 1):
-        if i > MAX_VISIBLE_ACTIONS:
-            # Todo: rozsvícení ukazatele posunu listu
-            break
         text = f" [{action.get_actual_manner()}]"
 
         if text == " [ ]":
@@ -304,9 +315,14 @@ def print_player_stats(player):
             y += (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX) * 2
 
 
-def update_visible_actions(cursor_position: int, total_actions: list) -> list:
-
-    pass
+def get_visible_actions(total_actions: list, total_actions_cursor_position: int) -> list:
+    result = []
+    for i, item in enumerate(total_actions[total_actions_cursor_position:]):
+        if i > MAX_VISIBLE_ACTIONS - 1:
+            break
+        else:
+            result.append(item)
+    return result
 
 
 def main():
@@ -322,7 +338,7 @@ def main():
 
     card3 = Card("Enemy card test", type="enemy", base_power=5, image="img_03.jpg",
                  condition="card ability text line one", bounty="VP, COMMAND",
-                 actions=[Action("pass"),
+                 actions=[Action("pass", "x", ["continue"]),
                           Action("reinforcements", "+", ["SUPPLY - 2 and DEFENCE + 1"]),
                           Action("fire support", "+", ["deal DAMAGE 3"], base_price=[("MUNITION", 2)])]
                  )
@@ -346,7 +362,7 @@ def main():
 
     # draw new card
     # ToDo: odečet počtu karet z DECKu
-    actual_card = card4
+    actual_card = card3
 
     # prvotní vytvoření listu všech dostupných akcí
     total_actions_cursor_position = 0
@@ -357,11 +373,8 @@ def main():
 
     # prvotní vytvoření listu viditelných akcí
     visible_actions_cursor_position = 0
-    for i, item in enumerate(total_actions):
-        if i > MAX_VISIBLE_ACTIONS:
-            break
-        else:
-            visible_actions.append(item)
+    visible_actions = get_visible_actions(total_actions, total_actions_cursor_position)
+
 
     while not game_over:
         for event in pygame.event.get():
@@ -370,16 +383,20 @@ def main():
                     game_over = True
 
                 if event.key == pygame.K_DOWN:
-                    # ToDo: pozor na přetečení pozice!
-                    visible_actions_cursor_position += 1
-                    if visible_actions_cursor_position > len(visible_actions) - 2 and len(total_actions[total_actions_cursor_position:]) > MAX_VISIBLE_ACTIONS:
-                        # posun viditelných akcí o 1 nahoru
-                        print("posun")
+                    if visible_actions_cursor_position < len(visible_actions) - 1:
+                        visible_actions_cursor_position += 1
+                    elif visible_actions_cursor_position == len(visible_actions) - 1:
+                        if visible_actions_cursor_position + total_actions_cursor_position < len(total_actions) - 1:
+                            total_actions_cursor_position += 1
+                            visible_actions = get_visible_actions(total_actions, total_actions_cursor_position)
 
                 if event.key == pygame.K_UP:
-                    visible_actions_cursor_position -= 1
-                    if visible_actions_cursor_position < 0:
-                        visible_actions_cursor_position = len(visible_actions) - 2
+                    if visible_actions_cursor_position > 0:
+                        visible_actions_cursor_position -= 1
+                    elif visible_actions_cursor_position == 0:
+                        if visible_actions_cursor_position + total_actions_cursor_position > 0:
+                            total_actions_cursor_position -= 1
+                            visible_actions = get_visible_actions(total_actions, total_actions_cursor_position)
 
                 # if event.key == pygame.K_1 or event.key == pygame.K_KP1:  # NUM 1
                 #     cursor_position = 0
@@ -392,7 +409,7 @@ def main():
                 print_card(actual_card)
 
                 draw_cursor(player, visible_actions_cursor_position)
-                print_action_console(player, visible_actions)
+                print_action_console(player, visible_actions, total_actions_cursor_position, len(total_actions) - 1)
 
                 print_action_description(visible_actions[visible_actions_cursor_position].get_description())
                 print_player_stats(player)
