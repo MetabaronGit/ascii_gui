@@ -136,6 +136,7 @@ class Card:
         self.__name = name
         self.__condition = condition
         self.__actions = actions
+        # ToDo: kontrola, jestli obrázek existuje, jinak bude img_00.jpg
         self.__image = "images/" + image
         self.__image_shift = image_shift
         self.__type = type
@@ -185,7 +186,7 @@ def print_card(card):
         print_text(card.get_name(), y, color=WHITE, center=True)
 
     # obrazek vycentrovany na ose x
-    # y = y - card1.get_image_shift()
+    y -= card.get_image_shift()
     card_img = pygame.image.load(card.get_image())
     SCREEN.blit(card_img, (SCREEN_WIDTH_PX // 2 - card_img.get_width() // 2,
                            y + CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX))
@@ -330,8 +331,12 @@ def main():
 
     player = Player("Necron Lord")
 
-    card1 = Card("Ambient card", condition="card ability text line one", bounty="VP", image="cultGreen.png")
-    card2 = Card("Event card test", image="img_02.jpg", condition="card ability text line one",
+    card1 = Card("Ambient card", condition="event", bounty="second line", image="img_21_test.jpg",
+                 actions=[Action("pass", "x", ["continue"])]
+                 )
+
+    card2 = Card("Event card test", image="testImg_540x300.png", condition="card ability text line one",
+                 image_shift=20,
                  actions=[Action("pass"),
                           Action("fire support", "+", ["deal DAMAGE 3"], base_price=[("MUNITION", 2), ("COMMAND", 3)])]
                  )
@@ -343,7 +348,7 @@ def main():
                           Action("fire support", "+", ["deal DAMAGE 3"], base_price=[("MUNITION", 2)])]
                  )
 
-    card4 = Card("Secret tomb", type="event", image="img_12.jpg",
+    card4 = Card("Tomb of tests", type="event", image="img_12.jpg",
                  condition="event",
                  actions=[Action("secret passage", "+", ["double any gains here"], base_price=[(VARIABLE_NAMES[3], 1)]),
                           Action("pass", "x", ["VP + 50"]),
@@ -356,13 +361,26 @@ def main():
                           # next time when will be draw, automaticly add 4 MUNITION
                  )
 
+    card_01 = Card("Energetic weaponry", type="event", image="img_20.jpg", condition="event",
+                   actions=[Action("use", "x", ["all other your units with COMBAT", "have + 1 COMBAT bonus"], base_price=[(VARIABLE_NAMES[7], 6)]),
+                            Action("take SUPPLY", "x", ["SUPPLY + 4"]),
+                            Action("initiative", "x", ["VP + 5"])]
+                   )
+
+    card_02 = Card("Supply tomb", type="event", image="img_12.jpg", condition="event",
+                   actions=[Action("reforge", "R", ["MUNITION + 2"],
+                                   base_price=[(VARIABLE_NAMES[7], 2)]),
+                            Action("take SUPPLY", "x", ["SUPPLY + 3"]),
+                            Action("initiative", "x", ["VP + 5"])]
+                   )
+
     total_actions = []
     visible_actions = []
     game_over = False
 
     # draw new card
     # ToDo: odečet počtu karet z DECKu
-    actual_card = card3
+    actual_card = card_02
 
     # prvotní vytvoření listu všech dostupných akcí
     total_actions_cursor_position = 0
