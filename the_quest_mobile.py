@@ -74,20 +74,8 @@ class Player:
             self.__stats[VARIABLE_NAMES[7]] = PlayerVariable(7, 20)      # supply
             self.__stats[VARIABLE_NAMES[8]] = PlayerVariable(8, 10, 10)  # deck
 
-    def get_variable_value(self, key: str) -> int:
-        if self.__stats.get(key):
-            return self.__stats.get(key).get_value()
-        else:
-            return ""
-
-    def get_max_variable_value(self, key: str) -> int:
-        if self.__stats.get(key):
-            return self.__stats.get(key).get_max_value()
-        else:
-            return ""
-
-    def get_variable_name(self, key) -> str:
-        return self.__stats[key].get_name()
+    def get_variable(self, key: str) -> PlayerVariable:
+        return self.__stats.get(key)
 
     def get_stats_names(self) -> list:
         return list(self.__stats.keys())
@@ -100,13 +88,15 @@ class Player:
 
 
 class Action:
-    def __init__(self, name: str, base_manner="x", description=[], base_price=[], discard=False):
+    def __init__(self, name: str, base_manner="x", description=[], base_price=[], base_bounty=[], discard=False):
         self.__name = name
         self.__base_manner = base_manner
         self.__actual_manner = base_manner
         self.__description = description
         self.__base_price = base_price
         self.__actual_price = base_price
+        self.__base_bounty = base_bounty
+        self.__actual_bounty = base_bounty
         self.__discard = discard
 
     def get_name(self):
@@ -124,6 +114,10 @@ class Action:
     def get_actual_price_list(self) -> list:
         # vrací list tuplů ("jméno proměnné", hodnota)
         return self.__actual_price
+
+    def get_actual_bounty_list(self) -> list:
+        # vrací list tuplů ("jméno proměnné", hodnota)
+        return self.__actual_bounty
 
     def get_description(self) -> list:
         # vrací list stringů s popisem akce. každý řádek je jeden index v listu
@@ -299,15 +293,15 @@ def print_player_stats(player):
     x = CONSOLE_FONT_WIDTH_PX
     y = SCREEN_HEIGHT_PX - (tab_lines * 2 + 2) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
     for n, item in enumerate(player.get_stats_names(), 1):
-        if player.get_variable_name(item) == None:
+        if player.get_variable(item).get_name() is None:
             text = ""
         else:
-            if player.get_variable_value(item) != -1:
-                text = f"{item}: {player.get_variable_value(item)}"
+            if player.get_variable(item).get_value() != -1:
+                text = f"{item}: {player.get_variable(item).get_value()}"
             else:
                 text = f"{item}: ∞"
-            if player.get_max_variable_value(item) != -1:
-                text += f"/{player.get_max_variable_value(item)}"
+            if player.get_variable(item).get_max_value() != -1:
+                text += f"/{player.get_variable(item).get_max_value()}"
         print_text(text, y, x=x)
         x += tab_column_width_chars * CONSOLE_FONT_WIDTH_PX + CONSOLE_FONT_WIDTH_PX
 
@@ -324,6 +318,34 @@ def get_visible_actions(total_actions: list, total_actions_cursor_position: int)
         else:
             result.append(item)
     return result
+
+
+def resolve_action(action: Action, player: Player) -> bool:
+    """Provede vybranou akci a vrátí True, pokud je konec kola."""
+    action_manner = action.get_base_manner()
+
+    # zaplacení ceny
+    price_list = action.get_actual_price_list()
+    print("price_list:", price_list)
+    for item in price_list:
+        player.get_variable(item[0]).decrease_value(item[1])
+
+    # získání odměny
+    bounty_list = action.get_actual_bounty_list()
+    print("bounty_list:", bounty_list)
+    for item in bounty_list:
+        player.get_variable(item[0]).increase_value(item[1])
+
+
+    # ToDo: změna action_manner
+    if action_manner == "x":
+        print("jednorázovka")
+        return True
+    elif action_manner == " ":
+        print("nelze")
+    elif action_manner == "R":
+        print("opakovčka")
+    return False
 
 
 def main():
@@ -368,15 +390,15 @@ def main():
                    )
 
     card_02 = Card("Supply tomb", type="event", image="img_12.jpg", condition="event",
-                   actions=[Action("reforge", "R", ["MUNITION + 2"],
+                   actions=[Action("reforge", "R", [f"{VARIABLE_NAMES[2]} + 2"],
+                                   base_bounty=[(VARIABLE_NAMES[2], 2)],
                                    base_price=[(VARIABLE_NAMES[7], 2)]),
-                            Action("take SUPPLY", "x", ["SUPPLY + 3"]),
+                            Action(f"take {VARIABLE_NAMES[7]}", "x", [f"{VARIABLE_NAMES[7]} + 3"]),
                             Action("initiative", "x", ["VP + 5"])]
                    )
 
-    total_actions = []
-    visible_actions = []
     game_over = False
+    next_turn = False
 
     # draw new card
     # ToDo: odečet počtu karet z DECKu
@@ -399,6 +421,10 @@ def main():
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_ESCAPE:
                     game_over = True
+
+                if event.key == pygame.K_SPACE or event.key == pygame.K_KP_ENTER or event.key == pygame.K_RETURN:
+                    if resolve_action(visible_actions[visible_actions_cursor_position], player):
+                        next_turn = True
 
                 if event.key == pygame.K_DOWN:
                     if visible_actions_cursor_position < len(visible_actions) - 1:
@@ -438,6 +464,10 @@ def main():
                 game_over = True
 
         pygame.display.flip()
+        # ToDo: konec kola, draw new card
+        if next_turn:
+            print("další kolo")
+            next_turn = False
         # pygame.display.update()
         # clock.tick(60)
 
