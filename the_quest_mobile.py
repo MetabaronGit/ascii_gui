@@ -92,12 +92,31 @@ class Action:
         self.__name = name
         self.__base_manner = base_manner
         self.__actual_manner = base_manner
-        self.__description = description
         self.__base_price = base_price
         self.__actual_price = base_price
         self.__base_bounty = base_bounty
         self.__actual_bounty = base_bounty
         self.__discard = discard
+        self.__description = description
+
+    def get_description(self):
+    # vrací list stringů s popisem akce. každý řádek je jeden index v listu
+        result = ""
+        if not self.__description:
+            for item in self.__base_bounty:
+                if result:
+                    result += ", "
+                result += f"{item[0]}"
+                if item[1] > 0:
+                    result += " + "
+                else:
+                    result += " - "
+                result += f"{item[1]}"
+            return [result]
+        else:
+            return self.__description
+
+        return self.__description
 
     def get_name(self):
         return self.__name
@@ -111,6 +130,9 @@ class Action:
     def get_actual_manner(self):
         return self.__actual_manner
 
+    def change_actual_manner(self, new_value: str):
+        self.__actual_manner = new_value
+
     def get_actual_price_list(self) -> list:
         # vrací list tuplů ("jméno proměnné", hodnota)
         return self.__actual_price
@@ -118,10 +140,6 @@ class Action:
     def get_actual_bounty_list(self) -> list:
         # vrací list tuplů ("jméno proměnné", hodnota)
         return self.__actual_bounty
-
-    def get_description(self) -> list:
-        # vrací list stringů s popisem akce. každý řádek je jeden index v listu
-        return self.__description
 
 
 class Card:
@@ -322,29 +340,25 @@ def get_visible_actions(total_actions: list, total_actions_cursor_position: int)
 
 def resolve_action(action: Action, player: Player) -> bool:
     """Provede vybranou akci a vrátí True, pokud je konec kola."""
-    action_manner = action.get_base_manner()
+    action_manner = action.get_actual_manner()
 
     # zaplacení ceny
     price_list = action.get_actual_price_list()
-    print("price_list:", price_list)
     for item in price_list:
         player.get_variable(item[0]).decrease_value(item[1])
 
     # získání odměny
     bounty_list = action.get_actual_bounty_list()
-    print("bounty_list:", bounty_list)
     for item in bounty_list:
         player.get_variable(item[0]).increase_value(item[1])
 
-
     # ToDo: změna action_manner
     if action_manner == "x":
-        print("jednorázovka")
         return True
-    elif action_manner == " ":
-        print("nelze")
     elif action_manner == "R":
-        print("opakovčka")
+        pass
+    elif action_manner == "+":
+        action.change_actual_manner(" ")
     return False
 
 
@@ -393,8 +407,9 @@ def main():
                    actions=[Action("reforge", "R", [f"{VARIABLE_NAMES[2]} + 2"],
                                    base_bounty=[(VARIABLE_NAMES[2], 2)],
                                    base_price=[(VARIABLE_NAMES[7], 2)]),
-                            Action(f"take {VARIABLE_NAMES[7]}", "x", [f"{VARIABLE_NAMES[7]} + 3"]),
-                            Action("initiative", "x", ["VP + 5"])]
+                            Action(f"take {VARIABLE_NAMES[7]}", "x", base_bounty=[(VARIABLE_NAMES[7], 3)]),
+                            Action(f"increase {VARIABLE_NAMES[1]}", "+", base_bounty=[(VARIABLE_NAMES[1], 1)]),
+                            Action("initiative", "x", description=["{variable} + {value}"], base_bounty=[(VARIABLE_NAMES[5], 5)])]
                    )
 
     game_over = False
@@ -423,8 +438,9 @@ def main():
                     game_over = True
 
                 if event.key == pygame.K_SPACE or event.key == pygame.K_KP_ENTER or event.key == pygame.K_RETURN:
-                    if resolve_action(visible_actions[visible_actions_cursor_position], player):
-                        next_turn = True
+                    if visible_actions[visible_actions_cursor_position].get_actual_manner() != " ":
+                        if resolve_action(visible_actions[visible_actions_cursor_position], player):
+                            next_turn = True
 
                 if event.key == pygame.K_DOWN:
                     if visible_actions_cursor_position < len(visible_actions) - 1:
