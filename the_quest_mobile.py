@@ -33,6 +33,7 @@ class PlayerVariable:
             self.__name = "MAX " + VARIABLE_NAMES[name_index]
         else:
             self.__name = VARIABLE_NAMES[name_index]
+        self.__max = max
         self.__value = value
         self.__visible = visible
         self.__unlimited = unlimited
@@ -48,6 +49,9 @@ class PlayerVariable:
 
     def is_unlimited(self) -> bool:
         return self.__unlimited
+
+    def is_max(self) -> bool:
+        return self.__max
 
     def increase_value(self, amount: int) -> None:
         if not self.__unlimited:
@@ -65,9 +69,11 @@ class Player:
         self.__name = name
         self.__tab_lines = 3
         self.__stats = dict()
+        self.__draw_deck = list()
+        self.__discard_deck = list()
         # ToDo: permanent a actual bonuses variables
-        self.__permanent_variable7_bonus = 0
-        self.__actual_variable7_bonus = 0
+        self.__permanent_variable7_modificator = 0
+        self.__actual_variable7_modificator = 0
 
         if name == "Necron Lord":
             self.__stats[VARIABLE_NAMES[0]] = PlayerVariable(0, 20)  # power
@@ -76,7 +82,7 @@ class Player:
             self.__stats["MAX " + VARIABLE_NAMES[1]] = PlayerVariable(1, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[2]] = PlayerVariable(2, 2)       # munition
             self.__stats["MAX " + VARIABLE_NAMES[2]] = PlayerVariable(2, max=True, unlimited=True, visible=False)
-            self.__stats[VARIABLE_NAMES[3]] = PlayerVariable(3, -1)      # command
+            self.__stats[VARIABLE_NAMES[3]] = PlayerVariable(3, unlimited=True)      # command
             self.__stats["MAX " + VARIABLE_NAMES[3]] = PlayerVariable(3, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[4]] = PlayerVariable(4)          # defence
             self.__stats["MAX " + VARIABLE_NAMES[4]] = PlayerVariable(4, max=True, unlimited=True, visible=False)
@@ -86,8 +92,8 @@ class Player:
             self.__stats["MAX " + VARIABLE_NAMES[6]] = PlayerVariable(6, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[7]] = PlayerVariable(7, 20)      # supply
             self.__stats["MAX " + VARIABLE_NAMES[7]] = PlayerVariable(7, max=True, unlimited=True, visible=False)
-            self.__stats[VARIABLE_NAMES[8]] = PlayerVariable(8, 10, 10)  # deck
-            self.__stats["MAX " + VARIABLE_NAMES[8]] = PlayerVariable(8, max=True, unlimited=True, visible=False)
+            self.__stats[VARIABLE_NAMES[8]] = PlayerVariable(8, 0)  # deck
+            self.__stats["MAX " + VARIABLE_NAMES[8]] = PlayerVariable(8, max=True, visible=True)
 
     def get_variable(self, key: str) -> PlayerVariable:
         return self.__stats.get(key)
@@ -100,6 +106,22 @@ class Player:
 
     def get_tab_lines(self):
         return self.__tab_lines
+
+    def put_card_to_draw_deck(self, card):
+        # vloží kartu na vršek hracího balíku
+        self.__draw_deck.append(card)
+
+    def draw_card_from_draw_deck(self):
+        pass
+
+    def put_card_to_discard_deck(self, card):
+        pass
+
+    def shuffle_draw_deck(self):
+        pass
+
+    def draw_deck_number(self):
+        return len(self.__draw_deck)
 
 
 class Action:
@@ -325,7 +347,11 @@ def print_player_stats(player):
     # umisteni se pocita od spodniho okraje SCREENu nad popisky vybranych akci
     x = CONSOLE_FONT_WIDTH_PX
     y = SCREEN_HEIGHT_PX - (tab_lines * 2 + 2) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
-    for n, item in enumerate(player.get_stats_names(), 1):
+    n = 0
+    for item in player.get_stats_names():
+        if player.get_variable(item).is_max():
+            continue
+        n += 1
         if not player.get_variable(item).is_visible():
             text = ""
         else:
@@ -333,8 +359,8 @@ def print_player_stats(player):
                 text = f"{item}: {player.get_variable(item).get_value()}"
             else:
                 text = f"{item}: ∞"
-            if not player.get_variable(item).is_unlimited():
-                text += f"/{player.get_variable(item).get_value()}"
+            if not player.get_variable("MAX " + item).is_unlimited():
+                text += f"/{player.get_variable('MAX ' + item).get_value()}"
         print_text(text, y, x=x)
         x += tab_column_width_chars * CONSOLE_FONT_WIDTH_PX + CONSOLE_FONT_WIDTH_PX
 
@@ -377,10 +403,39 @@ def resolve_action(action: Action, player: Player) -> bool:
     return False
 
 
+def create_deck(player: Player) -> None:
+    """
+    Generování karet a sestavení hracího balíku.
+    """
+    card_05 = Card("Supply tomb", type="event", image="img_12.jpg", condition="event",
+                   actions=[Action("reforge", "R", [f"{VARIABLE_NAMES[2]} + 2"],
+                                   base_bounty=[(VARIABLE_NAMES[2], 2)],
+                                   base_price=[(VARIABLE_NAMES[7], 2)]),
+                            Action(f"take {VARIABLE_NAMES[7]}", "x", base_bounty=[(VARIABLE_NAMES[7], 3)]),
+                            Action(f"increase {VARIABLE_NAMES[1]}", "+", base_bounty=[(VARIABLE_NAMES[1], 1)]),
+                            Action("initiative", "x", description=["{variable} + {value}"],
+                                   base_bounty=[(VARIABLE_NAMES[5], 5)])]
+                   )
+
+    card_04 = Card("Strong leader", type="event", image="img_03.jpg", condition="event",
+
+                   actions=[Action(f"increase MAX {VARIABLE_NAMES[0]}", "x", base_bounty=[(VARIABLE_NAMES[0], 1)]),
+                            Action(f"increase {VARIABLE_NAMES[3]}", "x", base_bounty=[(VARIABLE_NAMES[3], 4)]),
+                            Action(f"increase {VARIABLE_NAMES[1]}", "x", base_bounty=[(VARIABLE_NAMES[1], 1)]),
+                            Action("initiative", "x", description=["{variable} + {value}"],
+                                   base_bounty=[(VARIABLE_NAMES[5], 5)])]
+                   )
+
+    player.put_card_to_draw_deck(card_04)
+    player.put_card_to_draw_deck(card_05)
+    player.get_variable(VARIABLE_NAMES[8]).increase_value(player.draw_deck_number())
+    player.get_variable("MAX " + VARIABLE_NAMES[8]).increase_value(player.draw_deck_number())
+
 def main():
     pygame.display.set_caption("the quest - technological demo, since 04.2021")
 
     player = Player("Necron Lord")
+    create_deck(player)
 
     card1 = Card("Ambient card", condition="event", bounty="second line", image="img_21_test.jpg",
                  actions=[Action("pass", "x", ["continue"])]
