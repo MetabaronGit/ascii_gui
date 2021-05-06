@@ -27,14 +27,15 @@ MAX_VISIBLE_ACTIONS = 6
 
 
 class PlayerVariable:
-    # name_index=None -> nepouziva se, value= -1 -> unlimited, max_value=-1 -> unlimited
-    def __init__(self, name_index: any, value=0, max_value=-1):
-        if name_index is not None:
-            self.__name = VARIABLE_NAMES[name_index]
+    # visible -> True = používá se, max=True -> maximální hodnota pro hodnotu danného indexu
+    def __init__(self, name_index: any, value=0, visible=True, max=False, unlimited=False):
+        if max:
+            self.__name = "MAX " + VARIABLE_NAMES[name_index]
         else:
-            self.__name = None
+            self.__name = VARIABLE_NAMES[name_index]
         self.__value = value
-        self.__max_value = max_value
+        self.__visible = visible
+        self.__unlimited = unlimited
 
     def get_name(self) -> str:
         return self.__name
@@ -42,16 +43,18 @@ class PlayerVariable:
     def get_value(self) -> int:
         return self.__value
 
-    def get_max_value(self) -> int:
-        return self.__max_value
+    def is_visible(self) -> bool:
+        return self.__visible
+
+    def is_unlimited(self) -> bool:
+        return self.__unlimited
 
     def increase_value(self, amount: int) -> None:
-        self.__value += amount
-        if self.__max_value != -1 and self.__value > self.__max_value:
-            self.__value = self.__max_value
+        if not self.__unlimited:
+            self.__value += amount
 
     def decrease_value(self, amount: int) -> None:
-        if self.__value != -1:
+        if not self.__unlimited:
             self.__value -= amount
             if self.__value < 0:
                 self.__value = 0
@@ -62,17 +65,29 @@ class Player:
         self.__name = name
         self.__tab_lines = 3
         self.__stats = dict()
+        # ToDo: permanent a actual bonuses variables
+        self.__permanent_variable7_bonus = 0
+        self.__actual_variable7_bonus = 0
 
         if name == "Necron Lord":
-            self.__stats[VARIABLE_NAMES[0]] = PlayerVariable(0, 20, 20)  # power
+            self.__stats[VARIABLE_NAMES[0]] = PlayerVariable(0, 20)  # power
+            self.__stats["MAX " + VARIABLE_NAMES[0]] = PlayerVariable(0, 20, max=True, visible=False)
             self.__stats[VARIABLE_NAMES[1]] = PlayerVariable(1)          # combat
+            self.__stats["MAX " + VARIABLE_NAMES[1]] = PlayerVariable(1, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[2]] = PlayerVariable(2, 2)       # munition
+            self.__stats["MAX " + VARIABLE_NAMES[2]] = PlayerVariable(2, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[3]] = PlayerVariable(3, -1)      # command
+            self.__stats["MAX " + VARIABLE_NAMES[3]] = PlayerVariable(3, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[4]] = PlayerVariable(4)          # defence
+            self.__stats["MAX " + VARIABLE_NAMES[4]] = PlayerVariable(4, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[5]] = PlayerVariable(5)          # vp
-            self.__stats[VARIABLE_NAMES[6]] = PlayerVariable(None, -1)   # poison
+            self.__stats["MAX " + VARIABLE_NAMES[5]] = PlayerVariable(5, max=True, unlimited=True, visible=False)
+            self.__stats[VARIABLE_NAMES[6]] = PlayerVariable(6, visible=False)   # poison
+            self.__stats["MAX " + VARIABLE_NAMES[6]] = PlayerVariable(6, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[7]] = PlayerVariable(7, 20)      # supply
+            self.__stats["MAX " + VARIABLE_NAMES[7]] = PlayerVariable(7, max=True, unlimited=True, visible=False)
             self.__stats[VARIABLE_NAMES[8]] = PlayerVariable(8, 10, 10)  # deck
+            self.__stats["MAX " + VARIABLE_NAMES[8]] = PlayerVariable(8, max=True, unlimited=True, visible=False)
 
     def get_variable(self, key: str) -> PlayerVariable:
         return self.__stats.get(key)
@@ -311,15 +326,15 @@ def print_player_stats(player):
     x = CONSOLE_FONT_WIDTH_PX
     y = SCREEN_HEIGHT_PX - (tab_lines * 2 + 2) * (CONSOLE_FONT_HEIGHT_PX + LINE_SPACING_PX)
     for n, item in enumerate(player.get_stats_names(), 1):
-        if player.get_variable(item).get_name() is None:
+        if not player.get_variable(item).is_visible():
             text = ""
         else:
-            if player.get_variable(item).get_value() != -1:
+            if not player.get_variable(item).is_unlimited():
                 text = f"{item}: {player.get_variable(item).get_value()}"
             else:
                 text = f"{item}: ∞"
-            if player.get_variable(item).get_max_value() != -1:
-                text += f"/{player.get_variable(item).get_max_value()}"
+            if not player.get_variable(item).is_unlimited():
+                text += f"/{player.get_variable(item).get_value()}"
         print_text(text, y, x=x)
         x += tab_column_width_chars * CONSOLE_FONT_WIDTH_PX + CONSOLE_FONT_WIDTH_PX
 
@@ -412,12 +427,21 @@ def main():
                             Action("initiative", "x", description=["{variable} + {value}"], base_bounty=[(VARIABLE_NAMES[5], 5)])]
                    )
 
+    card_03 = Card("Strong leader", type="event", image="img_03.jpg", condition="event",
+
+                   actions=[Action(f"increase MAX {VARIABLE_NAMES[0]}", "x", base_bounty=[(VARIABLE_NAMES[0], 1)]),
+                            Action(f"increase {VARIABLE_NAMES[3]}", "x", base_bounty=[(VARIABLE_NAMES[3], 4)]),
+                            Action(f"increase {VARIABLE_NAMES[1]}", "x", base_bounty=[(VARIABLE_NAMES[1], 1)]),
+                            Action("initiative", "x", description=["{variable} + {value}"],
+                                   base_bounty=[(VARIABLE_NAMES[5], 5)])]
+                   )
+
     game_over = False
     next_turn = False
 
     # draw new card
     # ToDo: odečet počtu karet z DECKu
-    actual_card = card_02
+    actual_card = card_03
 
     # prvotní vytvoření listu všech dostupných akcí
     total_actions_cursor_position = 0
