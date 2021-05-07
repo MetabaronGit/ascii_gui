@@ -1,4 +1,5 @@
 import pygame
+import random
 
 pygame.init()
 pygame.font.init()
@@ -64,6 +65,48 @@ class PlayerVariable:
                 self.__value = 0
 
 
+class Card:
+    def __init__(self, name: str, type="event", base_power=0, condition="", image="img_00.jpg", image_shift=0,
+                 bounty="", actions=[]):
+        self.__name = name
+        self.__condition = condition
+        self.__actions = actions
+        # ToDo: kontrola, jestli obrázek existuje, jinak bude img_00.jpg
+        self.__image = "images/" + image
+        self.__image_shift = image_shift
+        self.__type = type
+        self.__base_power = base_power
+        self.__actual_power = base_power
+        self.__bounty = bounty
+
+    def get_name(self):
+        return self.__name
+
+    def get_type(self):
+        return self.__type
+
+    def get_image(self):
+        return self.__image
+
+    def get_condition(self):
+        return self.__condition
+
+    def get_image_shift(self):
+        return self.__image_shift
+
+    def get_actual_power(self):
+        return self.__actual_power
+
+    def get_bounty(self):
+        return self.__bounty
+
+    def get_base_power(self):
+        return self.__base_power
+
+    def get_actions(self) -> list:
+        return self.__actions.copy()
+
+
 class Player:
     def __init__(self, name: str):
         self.__name = name
@@ -111,14 +154,14 @@ class Player:
         # vloží kartu na vršek hracího balíku
         self.__draw_deck.append(card)
 
-    def draw_card_from_draw_deck(self):
-        pass
+    def draw_card_from_draw_deck(self) -> Card:
+        return self.__draw_deck.pop()
 
     def put_card_to_discard_deck(self, card):
         pass
 
     def shuffle_draw_deck(self):
-        pass
+        random.shuffle(self.__draw_deck)
 
     def draw_deck_number(self):
         return len(self.__draw_deck)
@@ -137,7 +180,9 @@ class Action:
         self.__description = description
 
     def get_description(self):
-    # vrací list stringů s popisem akce. každý řádek je jeden index v listu
+        """
+        vrací list stringů s popisem akce. každý řádek je jeden index v listu
+        """
         result = ""
         if not self.__description:
             for item in self.__base_bounty:
@@ -152,8 +197,6 @@ class Action:
             return [result]
         else:
             return self.__description
-
-        return self.__description
 
     def get_name(self):
         return self.__name
@@ -177,48 +220,6 @@ class Action:
     def get_actual_bounty_list(self) -> list:
         # vrací list tuplů ("jméno proměnné", hodnota)
         return self.__actual_bounty
-
-
-class Card:
-    def __init__(self, name: str, type="event", base_power=0, condition="", image="img_00.jpg", image_shift=0,
-                 bounty="", actions=[]):
-        self.__name = name
-        self.__condition = condition
-        self.__actions = actions
-        # ToDo: kontrola, jestli obrázek existuje, jinak bude img_00.jpg
-        self.__image = "images/" + image
-        self.__image_shift = image_shift
-        self.__type = type
-        self.__base_power = base_power
-        self.__actual_power = base_power
-        self.__bounty = bounty
-
-    def get_name(self):
-        return self.__name
-
-    def get_type(self):
-        return self.__type
-
-    def get_image(self):
-        return self.__image
-
-    def get_condition(self):
-        return self.__condition
-
-    def get_image_shift(self):
-        return self.__image_shift
-
-    def get_actual_power(self):
-        return self.__actual_power
-
-    def get_bounty(self):
-        return self.__bounty
-
-    def get_base_power(self):
-        return self.__base_power
-
-    def get_actions(self) -> list:
-        return self.__actions.copy()
 
 
 def print_card(card):
@@ -407,6 +408,34 @@ def create_deck(player: Player) -> None:
     """
     Generování karet a sestavení hracího balíku.
     """
+    card_01 = Card("Tomb of tests", type="event", image="img_12.jpg",
+                   condition="event",
+                   actions=[Action("secret passage", "+", ["double any gains here"], base_price=[(VARIABLE_NAMES[3], 1)]),
+                            Action("pass", "x", ["VP + 50"]),
+                            Action("second pass", " ", ["double your VP", "and SUPPLY + 1"], discard=True),
+                            Action(f"take {VARIABLE_NAMES[2]}", "x", [f"{VARIABLE_NAMES[2]} + 2"]),
+                            Action(f"take {VARIABLE_NAMES[7]}", "x", [f"{VARIABLE_NAMES[7]} + 2"]),
+                            Action("reforge", "R", [f"{VARIABLE_NAMES[2]} + 2"], base_price=[(VARIABLE_NAMES[7], 2)]),
+                            Action("heal poison", " ", [f"remove all {VARIABLE_NAMES[6]}"],
+                                   base_price=[(VARIABLE_NAMES[0], 2)]),
+                            Action(f"spare {VARIABLE_NAMES[2]}", "x", ["put card back to the deck", "and shuffle it"],
+                                   base_price=[(VARIABLE_NAMES[2], 4)])]
+                                   # next time when will be draw, automaticly add 4 MUNITION
+                   )
+
+    card_02 = Card("Obelisk", type="event", image="img_01.jpg", condition="event",
+                   actions=[Action(f"build {VARIABLE_NAMES[4]}", "x",
+                                   base_bounty=[(VARIABLE_NAMES[4], 4)]),
+                            Action("initiative", "x", description=["{variable} + {value}"],
+                                   base_bounty=[(VARIABLE_NAMES[5], 5)])]
+                   )
+
+    card_03 = Card("Energetic weaponry", type="event", image="img_20.jpg", condition="event",
+                   actions=[Action("use", "x", ["all other your units with COMBAT", "have + 1 COMBAT bonus"], base_price=[(VARIABLE_NAMES[7], 6)]),
+                            Action("take SUPPLY", "x", ["SUPPLY + 4"]),
+                            Action("initiative", "x", ["VP + 5"])]
+                   )
+
     card_05 = Card("Supply tomb", type="event", image="img_12.jpg", condition="event",
                    actions=[Action("reforge", "R", [f"{VARIABLE_NAMES[2]} + 2"],
                                    base_bounty=[(VARIABLE_NAMES[2], 2)],
@@ -426,10 +455,14 @@ def create_deck(player: Player) -> None:
                                    base_bounty=[(VARIABLE_NAMES[5], 5)])]
                    )
 
+    player.put_card_to_draw_deck(card_01)
+    player.put_card_to_draw_deck(card_02)
     player.put_card_to_draw_deck(card_04)
     player.put_card_to_draw_deck(card_05)
+    player.shuffle_draw_deck()
     player.get_variable(VARIABLE_NAMES[8]).increase_value(player.draw_deck_number())
     player.get_variable("MAX " + VARIABLE_NAMES[8]).increase_value(player.draw_deck_number())
+
 
 def main():
     pygame.display.set_caption("the quest - technological demo, since 04.2021")
@@ -454,49 +487,12 @@ def main():
                           Action("fire support", "+", ["deal DAMAGE 3"], base_price=[("MUNITION", 2)])]
                  )
 
-    card4 = Card("Tomb of tests", type="event", image="img_12.jpg",
-                 condition="event",
-                 actions=[Action("secret passage", "+", ["double any gains here"], base_price=[(VARIABLE_NAMES[3], 1)]),
-                          Action("pass", "x", ["VP + 50"]),
-                          Action("second pass", " ", ["double your VP", "and SUPPLY + 1"], discard=True),
-                          Action(f"take {VARIABLE_NAMES[2]}", "x", [f"{VARIABLE_NAMES[2]} + 2"]),
-                          Action(f"take {VARIABLE_NAMES[7]}", "x", [f"{VARIABLE_NAMES[7]} + 2"]),
-                          Action("reforge", "R", [f"{VARIABLE_NAMES[2]} + 2"], base_price=[(VARIABLE_NAMES[7], 2)]),
-                          Action("heal poison", " ", [f"remove all {VARIABLE_NAMES[6]}"], base_price=[(VARIABLE_NAMES[0], 2)]),
-                          Action(f"spare {VARIABLE_NAMES[2]}", "x", ["put card back to the deck", "and shuffle it"], base_price=[(VARIABLE_NAMES[2], 4)])]
-                          # next time when will be draw, automaticly add 4 MUNITION
-                 )
-
-    card_01 = Card("Energetic weaponry", type="event", image="img_20.jpg", condition="event",
-                   actions=[Action("use", "x", ["all other your units with COMBAT", "have + 1 COMBAT bonus"], base_price=[(VARIABLE_NAMES[7], 6)]),
-                            Action("take SUPPLY", "x", ["SUPPLY + 4"]),
-                            Action("initiative", "x", ["VP + 5"])]
-                   )
-
-    card_02 = Card("Supply tomb", type="event", image="img_12.jpg", condition="event",
-                   actions=[Action("reforge", "R", [f"{VARIABLE_NAMES[2]} + 2"],
-                                   base_bounty=[(VARIABLE_NAMES[2], 2)],
-                                   base_price=[(VARIABLE_NAMES[7], 2)]),
-                            Action(f"take {VARIABLE_NAMES[7]}", "x", base_bounty=[(VARIABLE_NAMES[7], 3)]),
-                            Action(f"increase {VARIABLE_NAMES[1]}", "+", base_bounty=[(VARIABLE_NAMES[1], 1)]),
-                            Action("initiative", "x", description=["{variable} + {value}"], base_bounty=[(VARIABLE_NAMES[5], 5)])]
-                   )
-
-    card_03 = Card("Strong leader", type="event", image="img_03.jpg", condition="event",
-
-                   actions=[Action(f"increase MAX {VARIABLE_NAMES[0]}", "x", base_bounty=[(VARIABLE_NAMES[0], 1)]),
-                            Action(f"increase {VARIABLE_NAMES[3]}", "x", base_bounty=[(VARIABLE_NAMES[3], 4)]),
-                            Action(f"increase {VARIABLE_NAMES[1]}", "x", base_bounty=[(VARIABLE_NAMES[1], 1)]),
-                            Action("initiative", "x", description=["{variable} + {value}"],
-                                   base_bounty=[(VARIABLE_NAMES[5], 5)])]
-                   )
-
     game_over = False
     next_turn = False
 
     # draw new card
     # ToDo: odečet počtu karet z DECKu
-    actual_card = card_03
+    actual_card = player.draw_card_from_draw_deck()
 
     # prvotní vytvoření listu všech dostupných akcí
     total_actions_cursor_position = 0
