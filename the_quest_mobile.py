@@ -380,6 +380,19 @@ def get_visible_actions(total_actions: list, total_actions_cursor_position: int)
     return result
 
 
+def print_screen(actual_card, player, visible_actions, visible_actions_cursor_position,
+                 total_actions, total_actions_cursor_position) -> None:
+    SCREEN.fill((0, 0, 0))
+
+    print_card(actual_card)
+
+    draw_cursor(player, visible_actions_cursor_position)
+    print_action_console(player, visible_actions, total_actions_cursor_position, len(total_actions) - 1)
+
+    print_action_description(visible_actions[visible_actions_cursor_position].get_description())
+    print_player_stats(player)
+
+
 def resolve_action(action: Action, player: Player) -> bool:
     """Provede vybranou akci a vrátí True, pokud je konec kola."""
     action_manner = action.get_actual_manner()
@@ -426,7 +439,7 @@ def create_deck(player: Player) -> None:
     card_02 = Card("Obelisk", type="event", image="img_01.jpg", condition="event",
                    actions=[Action(f"build {VARIABLE_NAMES[4]}", "x",
                                    base_bounty=[(VARIABLE_NAMES[4], 4)]),
-                            Action("initiative", "x", description=["{variable} + {value}"],
+                            Action("prepare for war", "x", description=[f"double your {VARIABLE_NAMES[1]} value"],
                                    base_bounty=[(VARIABLE_NAMES[5], 5)])]
                    )
 
@@ -457,6 +470,7 @@ def create_deck(player: Player) -> None:
 
     player.put_card_to_draw_deck(card_01)
     player.put_card_to_draw_deck(card_02)
+    player.put_card_to_draw_deck(card_03)
     player.put_card_to_draw_deck(card_04)
     player.put_card_to_draw_deck(card_05)
     player.shuffle_draw_deck()
@@ -469,23 +483,6 @@ def main():
 
     player = Player("Necron Lord")
     create_deck(player)
-
-    card1 = Card("Ambient card", condition="event", bounty="second line", image="img_21_test.jpg",
-                 actions=[Action("pass", "x", ["continue"])]
-                 )
-
-    card2 = Card("Event card test", image="testImg_540x300.png", condition="card ability text line one",
-                 image_shift=20,
-                 actions=[Action("pass"),
-                          Action("fire support", "+", ["deal DAMAGE 3"], base_price=[("MUNITION", 2), ("COMMAND", 3)])]
-                 )
-
-    card3 = Card("Enemy card test", type="enemy", base_power=5, image="img_03.jpg",
-                 condition="card ability text line one", bounty="VP, COMMAND",
-                 actions=[Action("pass", "x", ["continue"]),
-                          Action("reinforcements", "+", ["SUPPLY - 2 and DEFENCE + 1"]),
-                          Action("fire support", "+", ["deal DAMAGE 3"], base_price=[("MUNITION", 2)])]
-                 )
 
     game_over = False
     next_turn = False
@@ -504,7 +501,6 @@ def main():
     # prvotní vytvoření listu viditelných akcí
     visible_actions_cursor_position = 0
     visible_actions = get_visible_actions(total_actions, total_actions_cursor_position)
-
 
     while not game_over:
         for event in pygame.event.get():
@@ -539,16 +535,8 @@ def main():
                 # if event.key == pygame.K_2 or event.key == pygame.K_KP2:  # NUM 2
                 #     cursor_position = 1
 
-                SCREEN.fill((0, 0, 0))
-
-                print_card(actual_card)
-
-                draw_cursor(player, visible_actions_cursor_position)
-                print_action_console(player, visible_actions, total_actions_cursor_position, len(total_actions) - 1)
-
-                print_action_description(visible_actions[visible_actions_cursor_position].get_description())
-                print_player_stats(player)
-
+                print_screen(actual_card, player, visible_actions, visible_actions_cursor_position,
+                             total_actions, total_actions_cursor_position)
 
             # zaviraci ikona okna X
             if event.type == pygame.QUIT:
@@ -557,10 +545,30 @@ def main():
         pygame.display.flip()
         # ToDo: konec kola, draw new card
         if next_turn:
-            print("další kolo")
-            next_turn = False
+            if player.draw_deck_number() == 0:
+                game_over = True
+            else:
+                actual_card = player.draw_card_from_draw_deck()
+                next_turn = False
+                player.get_variable(VARIABLE_NAMES[8]).decrease_value(1)
+                # vytvoření listu všech dostupných akcí
+                total_actions_cursor_position = 0
+                total_actions = actual_card.get_actions()
+
+                # kontrola vlastností akcí
+
+                # vytvoření listu viditelných akcí
+                visible_actions_cursor_position = 0
+                visible_actions = get_visible_actions(total_actions, total_actions_cursor_position)
+
+                # nové zobrazení všeho
+                print_screen(actual_card, player, visible_actions, visible_actions_cursor_position,
+                             total_actions, total_actions_cursor_position)
+
         # pygame.display.update()
         # clock.tick(60)
+
+    print("Game over.")
 
 
 if __name__ == "__main__":
